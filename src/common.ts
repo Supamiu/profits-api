@@ -110,9 +110,12 @@ export function updateItems(server: string, itemIds: number[]): Observable<{ ser
             return {
                 server,
                 data: data.items.reduce((acc: Record<string, any>, item: any) => {
-                    const v24 = item.recentHistory.filter((h: { timestamp: number }) => h.timestamp > yesterday).reduce((total: number, e: { quantity: number }) => total + e.quantity, 0);
+                    const last24hSales = item.recentHistory.filter((h: { timestamp: number }) => h.timestamp > yesterday);
+                    const tr24 = last24hSales.slice(-5).reduce((acc, row) => acc + row.pricePerUnit, 0) - last24hSales.slice(0, 5).reduce((acc, row) => acc + row.pricePerUnit, 0);
+                    const v24 = last24hSales.reduce((total: number, e: { quantity: number }) => total + e.quantity, 0);
                     const v48 = item.recentHistory.filter((h: { timestamp: number }) => h.timestamp > oneDaybeforeYesterday).reduce((total: number, e: { quantity: number }) => total + e.quantity, 0);
-                    const avg24 = Math.floor(item.recentHistory.filter((h: { timestamp: number }) => h.timestamp > yesterday).reduce((total: number, e: { total: number }) => total + e.total, 0) / v24) || 0;
+                    const avg24 = Math.floor(last24hSales.reduce((total: number, e: { total: number }) => total + e.total, 0) / v24) || 0;
+                    const t = item.listings.reduce((acc: number, a: any) => acc + a.quantity, 0);
                     const c = item.listings.sort((a: any, b: any) => a.pricePerUnit - b.pricePerUnit)[0]?.pricePerUnit || 0;
                     const c10 = item.listings.filter((l: any) => l.quantity >= 10).sort((a: any, b: any) => a.pricePerUnit - b.pricePerUnit)[0]?.pricePerUnit || 0;
                     const c50 = item.listings.filter((l: any) => l.quantity >= 50).sort((a: any, b: any) => a.pricePerUnit - b.pricePerUnit)[0]?.pricePerUnit || 0;
@@ -124,7 +127,9 @@ export function updateItems(server: string, itemIds: number[]): Observable<{ ser
                             avg24,
                             c,
                             c10,
-                            c50
+                            c50,
+                            t,
+                            tr24
                         }
                     };
                 }, {})
@@ -159,7 +164,7 @@ export function updateCache(servers: string[], items: Record<number, Item>, redi
                 profit: await computeProfit(item, server, redis),
                 v24: parsedMbEntry.v24,
                 v48: parsedMbEntry.v48,
-                levelReqs: getLevelRequirements(item, items)
+                levelReqs: getLevelRequirements(item, items),
             })
         }
         const newCache = uniqBy([...serverCache, ...currentServerCache], 'id');

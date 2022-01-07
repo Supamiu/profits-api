@@ -34,7 +34,7 @@ app.use(cors());
             if (!selfSufficient) {
                 return (b.profit.c - b.cost) * b.v24 / 4 - (a.profit.c - a.cost) * a.v24 / 4;
             }
-            return (b.profit.c - b.complexity * 10) * (b.v24) - (a.profit.c - a.complexity * 10) * (a.v24);
+            return (b.profit.c - b.complexity * 10) * (b.v24 / b.total) - (a.profit.c - a.complexity * 10) * (a.v24 / a.total);
         }).slice(0, 20);
         return res.send({
             items: matching
@@ -57,7 +57,7 @@ app.use(cors());
                 && row.v24 > minV24
                 && (row.levelReqs.every((lvl: number, i: number) => levels[i] >= lvl));
         }).sort((a, b) => {
-            return b.profit.c50 * b.v24 / 2 - a.profit.c50 * a.v24 / 2;
+            return b.profit.c50 * (b.v24 - b.total) - a.profit.c50 * (a.v24 - a.total);
         }).slice(0, 20);
         return res.send({
             items: matching
