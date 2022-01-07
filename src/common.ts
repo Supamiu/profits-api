@@ -164,6 +164,8 @@ export function updateCache(servers: string[], items: Record<number, Item>, redi
                 profit: await computeProfit(item, server, redis),
                 v24: parsedMbEntry.v24,
                 v48: parsedMbEntry.v48,
+                total: parsedMbEntry.t,
+                trend24: parsedMbEntry.t24,
                 levelReqs: getLevelRequirements(item, items),
             })
         }
