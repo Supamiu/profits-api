@@ -2,7 +2,7 @@ import {createClient, RedisClientType} from "redis";
 import {Item} from "./item";
 import {Observable} from "rxjs";
 import {subHours} from "date-fns";
-import {map, switchMap} from "rxjs/operators";
+import {map} from "rxjs/operators";
 import {doUniversalisRequest} from "./universalis";
 import {uniqBy} from "lodash";
 
@@ -12,7 +12,7 @@ export async function createRedisClient(): Promise<RedisClientType> {
     const REDISPORT = process.env.REDISPORT || 6379;
     const client = createClient({
         url: `redis://${REDISHOST}:${REDISPORT}`
-    }) as RedisClientType;
+    }) as unknown as RedisClientType;
     client.on('error', err => {
         console.error('REDIS ERROR', err);
         process.exit(1);
@@ -27,13 +27,16 @@ export function evaluateComplexity(item: Item, items: Record<number, Item>): num
     }
     if (item.requirements) {
         return item.requirements.filter(i => i.id > 19).reduce((acc, ingredient) => {
-            return acc + Math.floor(evaluateComplexity(items[+ingredient.id], items) * (ingredient.amount / 4));
+            return acc + Math.ceil(evaluateComplexity(items[+ingredient.id], items) * (ingredient.amount / 4));
         }, 1);
     }
     if (item.vendors) {
         return 1;
     }
     if (item.gathering) {
+        if (item.gathering.nodes[0]?.limited) {
+            return 4;
+        }
         return 1;
     }
     if (item.reduction) {
@@ -126,14 +129,6 @@ export function updateItems(server: string, itemIds: number[]): Observable<{ ser
                     };
                 }, {})
             };
-        })
-    );
-}
-
-export function updateServerData(server: string): Observable<Record<string, any>> {
-    return doUniversalisRequest(`https://universalis.app/api/extra/stats/most-recently-updated?world=${server}`).pipe(
-        switchMap((mru: { items: any[] }) => {
-            return updateItems(server, mru.items.map(item => item.itemID));
         })
     );
 }
