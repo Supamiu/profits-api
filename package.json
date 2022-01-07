@@ -3,7 +3,7 @@
   "scripts": {
     "start": "tsc -p tsconfig.json && node dist/api.js",
     "populate-cache": "tsc -p tsconfig.json && node dist/populate-cache.js",
-    "deploy": "gcloud builds submit --tag gcr.io/ffxivteamcraft/profits-api && gcloud beta run deploy --image gcr.io/ffxivteamcraft/profits-api"
+    "deploy": "gcloud builds submit --tag gcr.io/ffxivteamcraft/profits-api && gcloud beta run deploy profits-api --image gcr.io/ffxivteamcraft/profits-api --region us-central1"
   },
   "engines": {
     "node": "16"
