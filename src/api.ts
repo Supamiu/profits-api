@@ -1,7 +1,9 @@
 import express from 'express';
+import cors from 'cors';
 import {createRedisClient} from "./common";
 
 const app = express();
+app.use(cors());
 
 (async () => {
     const redis = await createRedisClient();
@@ -30,7 +32,7 @@ const app = express();
                 && (!selfSufficient || row.levelReqs.every((lvl: number, i: number) => levels[i] >= lvl));
         }).sort((a, b) => {
             if (!selfSufficient) {
-                return (b.profit.c - b.cost) - (a.profit.c - a.cost);
+                return (b.profit.c - b.cost) * b.v24 / 4 - (a.profit.c - a.cost) * a.v24 / 4;
             }
             return (b.profit.c - b.complexity * 10) * (b.v24) - (a.profit.c - a.complexity * 10) * (a.v24);
         }).slice(0, 20);
