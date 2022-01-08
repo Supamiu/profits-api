@@ -114,7 +114,7 @@ export function updateItems(server: string, itemIds: number[]): Observable<{ ser
                 server,
                 data: listing.items.reduce((acc: Record<string, any>, item: any) => {
                     const historyEntry = history.items.find((hItem: any) => hItem.itemID === item.itemID);
-                    const last24hSales = historyEntry.entries.filter((h: { timestamp: number }) => h.timestamp > yesterday);
+                    const last24hSales = historyEntry?.entries.filter((h: { timestamp: number }) => h.timestamp > yesterday) || [];
                     const tr24 = last24hSales.slice(-5).reduce((accp: number, row: any) => accp + row.pricePerUnit, 0) - last24hSales.slice(0, 5).reduce((accp: number, row: any) => accp + row.pricePerUnit, 0);
                     const v24 = last24hSales.reduce((total: number, e: { quantity: number }) => total + e.quantity, 0);
                     const v48 = historyEntry.entries.filter((h: { timestamp: number }) => h.timestamp > oneDaybeforeYesterday).reduce((total: number, e: { quantity: number }) => total + e.quantity, 0);
