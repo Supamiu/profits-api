@@ -5,6 +5,14 @@ import {createRedisClient} from "./common";
 const app = express();
 app.use(cors());
 
+function getScore(item: any, selfSufficient = true): number {
+    let baseScore = item.profit.c - item.complexity * 10;
+    if (!selfSufficient) {
+        baseScore = item.profit.c - item.cost;
+    }
+    return baseScore * item.v24;
+}
+
 (async () => {
     const redis = await createRedisClient();
 
@@ -32,9 +40,9 @@ app.use(cors());
                 && (!selfSufficient || row.levelReqs.every((lvl: number, i: number) => levels[i] >= lvl));
         }).sort((a, b) => {
             if (!selfSufficient) {
-                return (b.profit.c - b.cost) * b.v24 / 4 * ((b.tr24 || 1) / 1000) - (a.profit.c - a.cost) * a.v24 / 4 * ((a.tr24 || 1) / 1000);
+                return getScore(b, false) - getScore(a, false);
             }
-            return (b.profit.c - b.complexity * 10) * (b.v24 / (b.total || 1)) * ((b.tr24 || 1) / 1000) - (a.profit.c - a.complexity * 10) * (a.v24 / (a.total || 1)) * ((a.tr24 || 1) / 1000);
+            return getScore(b) - getScore(a);
         }).slice(0, 20);
         return res.send({
             items: matching
@@ -57,7 +65,7 @@ app.use(cors());
                 && row.v24 > minV24
                 && (row.levelReqs.every((lvl: number, i: number) => levels[i] >= lvl));
         }).sort((a, b) => {
-            return b.profit.c50 * (b.v24 - b.total) - a.profit.c50 * (a.v24 - a.total);
+            return getScore(b) - getScore(a);
         }).slice(0, 20);
         return res.send({
             items: matching
