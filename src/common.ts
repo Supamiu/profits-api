@@ -1,10 +1,10 @@
-import {createClient, RedisClientType} from "redis";
-import {Item} from "./item";
-import {combineLatest, Observable} from "rxjs";
-import {subHours} from "date-fns";
-import {map} from "rxjs/operators";
-import {doUniversalisRequest} from "./universalis";
-import {uniqBy} from "lodash";
+import { createClient, RedisClientType } from 'redis';
+import { Item } from './item';
+import { combineLatest, Observable } from 'rxjs';
+import { subHours } from 'date-fns';
+import { map, switchMap } from 'rxjs/operators';
+import { doUniversalisRequest } from './universalis';
+import { uniqBy } from 'lodash';
 
 
 export async function createRedisClient(): Promise<RedisClientType> {
@@ -51,7 +51,7 @@ export function evaluateComplexity(item: Item, items: Record<number, Item>): num
 export async function computeCost(item: Item, server: string, items: Record<number, Item>, redis: RedisClientType): Promise<number> {
     if (item.requirements) {
         let total = 1;
-        for (let ingredient of item.requirements) {
+        for (const ingredient of item.requirements) {
             const reqEntry = items[+ingredient.id];
             if (reqEntry) {
                 total += Math.floor(await computeCost(reqEntry, server, items, redis) * ingredient.amount);
@@ -107,13 +107,13 @@ export function updateItems(server: string, itemIds: number[]): Observable<{ ser
     const oneDaybeforeYesterday = Math.floor(subHours(new Date(), 48).getTime() / 1000);
     return combineLatest([
         doUniversalisRequest(`https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`),
-        doUniversalisRequest(`https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`),
+        doUniversalisRequest(`https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`)
     ]).pipe(
         map(([listing, history]) => {
             return {
                 server,
                 data: listing.items.reduce((acc: Record<string, any>, item: any) => {
-                    const historyEntry = history.items.find((hItem: any) => hItem.itemID === item.itemID) || {entries: []};
+                    const historyEntry = history.items.find((hItem: any) => hItem.itemID === item.itemID) || { entries: [] };
                     const last24hSales = historyEntry?.entries.filter((h: { timestamp: number }) => h.timestamp > yesterday) || [];
                     const tr24 = last24hSales.slice(-5).reduce((accp: number, row: any) => accp + row.pricePerUnit, 0) - last24hSales.slice(0, 5).reduce((accp: number, row: any) => accp + row.pricePerUnit, 0);
                     const v24 = last24hSales.reduce((total: number, e: { quantity: number }) => total + e.quantity, 0);
@@ -142,8 +142,9 @@ export function updateItems(server: string, itemIds: number[]): Observable<{ ser
     );
 }
 
-export function updateCache(servers: string[], items: Record<number, Item>, redis: RedisClientType): void {
-    servers.forEach(async server => {
+export async function updateCache(servers: string[], items: Record<number, Item>, redis: RedisClientType): Promise<void> {
+    console.log(`STARTING CACHE UPDATE FOR ${servers.length} servers`);
+    for(const server of servers){
         const currentServerCacheRaw = await redis.get(`profit:${server}`);
         let currentServerCache = [];
         if (currentServerCacheRaw) {
@@ -177,5 +178,14 @@ export function updateCache(servers: string[], items: Record<number, Item>, redi
         const newCache = uniqBy([...serverCache, ...currentServerCache], 'id');
         console.log(`UPDATED CACHE FOR ${server}, ${serverCache.length} entries (${newCache.length} total)`);
         await redis.set(`profit:${server}`, JSON.stringify(newCache));
-    });
+    }
+}
+
+
+export function updateServerData(server: string): Observable<Record<string, any>> {
+    return doUniversalisRequest(`https://universalis.app/api/extra/stats/most-recently-updated?world=${server}`).pipe(
+        switchMap((mru: { items: any[] }) => {
+            return updateItems(server, mru.items.map(item => item.itemID));
+        })
+    );
 }
