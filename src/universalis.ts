@@ -4,8 +4,8 @@ import axios from "axios";
 import axiosRetry from "axios-retry";
 
 
-const UNIVERSALIS_REQ_PER_SECOND = 20;
-const UNIVERSALIS_BURST = 40;
+const UNIVERSALIS_REQ_PER_SECOND = 14;
+const UNIVERSALIS_BURST = 14;
 
 axiosRetry(axios, {retries: 3, retryDelay: c => c * 1000})
 
@@ -36,10 +36,6 @@ setInterval(() => {
     ratesStatus.burst = requestsLog[currentSeconds - 1] || 0;
 }, 200);
 
-setInterval(() => {
-    console.log(ratesStatus);
-}, 1000);
-
 function initQueue(): Subscription {
     return interval(1000 / UNIVERSALIS_REQ_PER_SECOND).pipe(
         filter(() => queue.length > 0),
@@ -48,14 +44,16 @@ function initQueue(): Subscription {
                 return of(null);
             }
             const {url, res$} = queue.shift();
-            requestsLog[new Date().getUTCSeconds()] = (requestsLog[new Date().getUTCSeconds()] || 0);
-            requestsLog[new Date().getUTCSeconds()] += 1;
             let delay$ = timer(0);
             if (ratesStatus.burst > UNIVERSALIS_BURST || ratesStatus.avg > UNIVERSALIS_REQ_PER_SECOND - 2) {
-                delay$ = timer(500);
+                delay$ = timer(1000);
             }
             return delay$.pipe(
-                switchMap(() => from(axios.get(url))),
+                switchMap(() => {
+                    requestsLog[new Date().getUTCSeconds()] = (requestsLog[new Date().getUTCSeconds()] || 0);
+                    requestsLog[new Date().getUTCSeconds()] += 1;
+                    return from(axios.get(url))
+                }),
                 map(res => {
                     return {
                         res,
@@ -63,7 +61,7 @@ function initQueue(): Subscription {
                     };
                 })
             );
-        }, 20)
+        }, 10)
     ).subscribe((entry) => {
         if (entry) {
             const {res$, res} = entry;
