@@ -11,7 +11,7 @@ import {
     Subscription,
     timer
 } from "rxjs";
-import {filter, map, switchMap, tap} from "rxjs/operators";
+import {filter, map, retry, switchMap, tap} from "rxjs/operators";
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
@@ -79,6 +79,10 @@ function initQueue(): Subscription {
                 })
             );
         }, 10),
+        retry({
+            count: 5,
+            delay: (error, retryCount) => of(Math.pow(retryCount, 2) * 1000)
+        }),
         catchError(e => {
             console.error(e.message);
             return of(null);
@@ -97,7 +101,7 @@ export function doUniversalisRequest<T = any>(url: string): Observable<T> {
         queue.push({
             url, res$
         })
-    }, 120000);
+    }, 30000);
     const res$ = new ReplaySubject<T>();
     queue.push({
         url,
