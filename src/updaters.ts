@@ -92,8 +92,8 @@ coreData$.pipe(
 console.log('Creating full data scheduler');
 coreData$.pipe(
     switchMap(([servers, redis, items, itemIds]) => {
-        // Update twice a day per server, start after 30s to avoid colliding with the other scheduler
-        return timer(30000, Math.floor(86400000 / 2 / servers.length)).pipe(
+        // Update four times a day per server, start after 30s to avoid colliding with the other scheduler
+        return timer(30000, Math.floor(86400000 / 4 / servers.length)).pipe(
             exhaustMap(i => {
                 const server = servers[i % (servers.length - 1)];
                 timers[`FULL:${server}`] = Date.now();
