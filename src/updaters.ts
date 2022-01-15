@@ -1,8 +1,8 @@
 import axios from "axios";
 import {chunk, uniq} from "lodash";
 import {combineLatest, from, of, ReplaySubject, shareReplay, timer} from "rxjs";
-import {exhaustMap, map, first, pluck, switchMap} from "rxjs/operators";
-import {createRedisClient, updateCache, updateItems, updateServerData} from "./common";
+import {exhaustMap, map, pluck, switchMap} from "rxjs/operators";
+import {createRedisClient, updateCache, updateItems} from "./common";
 import {doUniversalisRequest} from "./universalis";
 import {Item} from "./item";
 
@@ -49,51 +49,11 @@ const coreData$ = combineLatest([
     shareReplay(1)
 );
 
-console.log('Creating cache scheduler');
-coreData$.pipe(
-    switchMap(([servers, redis, items]) => {
-        return timer(0, 60000).pipe(
-            exhaustMap(i => {
-                timers[`CACHE:${i}`] = Date.now();
-                return combineLatest(servers.map(server => {
-                    return updateServerData(server);
-                })).pipe(
-                    switchMap((res: Record<string, any>[]) => {
-                        if (res.length === 0) {
-                            return of([]);
-                        }
-                        return combineLatest(res.map(row => {
-                            const itemIds = Object.keys(row.data);
-                            if (itemIds.length === 0) {
-                                return of([]);
-                            }
-                            return combineLatest(itemIds.map(id => {
-                                return from(redis.set(`mb:${row.server}:${id}`, JSON.stringify(row.data[+id])));
-                            }));
-                        })).pipe(
-                            switchMap(() => {
-                                return from(updateCache(uniq(res.map(row => row.server)), items, redis));
-                            })
-                        );
-                    }),
-                    map(() => i),
-                    first()
-                );
-            })
-        )
-    })
-).subscribe((i) => {
-    const timeToUpdate = Date.now() - timers[`CACHE:${i}`];
-    sendToDiscord(`Cache update done in ${timeToUpdate.toLocaleString()}ms.`);
-    delete timers[`CACHE:${i}`];
-});
-
-
 console.log('Creating full data scheduler');
 coreData$.pipe(
     switchMap(([servers, redis, items, itemIds]) => {
-        // Update four times a day per server, start after 30s to avoid colliding with the other scheduler
-        return timer(30000, Math.floor(86400000 / 4 / servers.length)).pipe(
+        // Update 8 times a day per server, start after 30s to avoid colliding with the other scheduler
+        return timer(30000, Math.floor(86400000 / 8 / servers.length)).pipe(
             exhaustMap(i => {
                 const server = servers[i % (servers.length - 1)];
                 timers[`FULL:${server}`] = Date.now();
