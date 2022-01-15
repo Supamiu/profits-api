@@ -1,7 +1,7 @@
 import axios from "axios";
 import {chunk, uniq} from "lodash";
 import {combineLatest, from, of, ReplaySubject, shareReplay, timer} from "rxjs";
-import {exhaustMap, map, pluck, switchMap} from "rxjs/operators";
+import {exhaustMap, map, first, pluck, switchMap} from "rxjs/operators";
 import {createRedisClient, updateCache, updateItems, updateServerData} from "./common";
 import {doUniversalisRequest} from "./universalis";
 import {Item} from "./item";
@@ -76,7 +76,8 @@ coreData$.pipe(
                             })
                         );
                     }),
-                    map(() => i)
+                    map(() => i),
+                    first()
                 );
             })
         )
