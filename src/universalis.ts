@@ -1,11 +1,11 @@
-import {from, interval, mergeMap, Observable, of, ReplaySubject, Subject, Subscription, timer} from "rxjs";
+import {from, interval, mapTo, mergeMap, Observable, of, ReplaySubject, Subject, Subscription, timer} from "rxjs";
 import {filter, map, switchMap, tap} from "rxjs/operators";
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
 
-const UNIVERSALIS_REQ_PER_SECOND = 12;
-const UNIVERSALIS_BURST = 12;
+const UNIVERSALIS_REQ_PER_SECOND = 20;
+const UNIVERSALIS_BURST = 20;
 
 axiosRetry(axios, {retries: 3, retryDelay: c => c * 1000})
 
@@ -44,14 +44,19 @@ function initQueue(): Subscription {
                 return of(null);
             }
             const {url, res$} = queue.shift();
-            let delay$ = timer(0);
+            let delay$ = timer(0).pipe(mapTo(0));
             if (ratesStatus.burst > UNIVERSALIS_BURST || ratesStatus.avg > UNIVERSALIS_REQ_PER_SECOND - 2) {
-                delay$ = timer(1000);
+                delay$ = timer(1000).pipe(mapTo(1000));
+            } else {
+                requestsLog[new Date().getUTCSeconds()] = (requestsLog[new Date().getUTCSeconds()] || 0);
+                requestsLog[new Date().getUTCSeconds()] += 1;
             }
             return delay$.pipe(
-                switchMap(() => {
-                    requestsLog[new Date().getUTCSeconds()] = (requestsLog[new Date().getUTCSeconds()] || 0);
-                    requestsLog[new Date().getUTCSeconds()] += 1;
+                switchMap((delayed) => {
+                    if (delayed > 0) {
+                        requestsLog[new Date().getUTCSeconds()] = (requestsLog[new Date().getUTCSeconds()] || 0);
+                        requestsLog[new Date().getUTCSeconds()] += 1;
+                    }
                     return from(axios.get(url))
                 }),
                 map(res => {
