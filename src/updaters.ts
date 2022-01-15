@@ -80,6 +80,9 @@ coreData$.pipe(
                             })
                         );
                     }),
+                    switchMap(() => {
+                        return from(redis.set(`profit:${server}:updated`, Date.now()))
+                    }),
                     map(() => server)
                 );
             })
