@@ -28,6 +28,7 @@ function getScore(item: any, selfSufficient = true): number {
         const maxComplexity = req.query.maxComplexity || 99999;
         const selfSufficient = req.query.selfSufficient === 'true';
         const serverCache = await redis.get(`profit:${server}`);
+        const serverUpdated = await redis.get(`profit:${server}:updated`);
         if (!serverCache) {
             return res.status(500).send({message: `Profit cache for ${server} is missing`});
         }
@@ -45,7 +46,8 @@ function getScore(item: any, selfSufficient = true): number {
             return getScore(b) - getScore(a);
         }).slice(0, 20);
         return res.send({
-            items: matching
+            items: matching,
+            updated: +(serverUpdated || 1642050201)
         });
     });
 
@@ -54,6 +56,7 @@ function getScore(item: any, selfSufficient = true): number {
         const levels = (req.query.levels as string)?.split(',').map(l => +l);
         const minV24 = req.query.minVelocity || 10;
         const serverCache = await redis.get(`profit:${server}`);
+        const serverUpdated = await redis.get(`profit:${server}:updated`);
         if (!serverCache) {
             return res.status(500).send({message: `Profit cache for ${server} is missing`});
         }
@@ -68,7 +71,8 @@ function getScore(item: any, selfSufficient = true): number {
             return getScore(b) - getScore(a);
         }).slice(0, 20);
         return res.send({
-            items: matching
+            items: matching,
+            updated: +(serverUpdated || 1642050201)
         });
     });
 
