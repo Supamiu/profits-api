@@ -29,7 +29,7 @@ setInterval(() => {
     const requestsTotal = new Array(10)
         .fill(null)
         .map((_, i) => {
-            return requestsLog[currentSeconds - i] || 0;
+            return requestsLog[currentSeconds - i] || 15;
         })
         .reduce((acc, v) => acc + v);
     ratesStatus.avg = requestsTotal / 10;
