@@ -1,9 +1,9 @@
 import axios from "axios";
-import {chunk, uniq} from "lodash";
+import {uniq} from "lodash";
 import {BehaviorSubject, combineLatest, from, of} from "rxjs";
-import {map, switchMap, tap} from "rxjs/operators";
-import {createRedisClient, updateCache, updateItems} from "./common";
-import {doUniversalisRequest} from "./universalis";
+import {filter, switchMap, tap} from "rxjs/operators";
+import {createRedisClient, updateCache, updateServerData} from "./common";
+import {closeUniversalisQueue} from "./universalis";
 import {Item} from "./item";
 
 let items: Record<number, Item> = {};
@@ -40,34 +40,23 @@ combineLatest([
 });
 
 
-console.log('Starting');
-console.log('Fetching server list');
 combineLatest([
-    from(axios.get('https://xivapi.com/servers')),
-    from(createRedisClient())
+    itemsDone$.pipe(filter(done => done)),
+    createRedisClient()
 ]).pipe(
-    switchMap(([res, redis]) => {
-        const servers = res.data as string[];
-        return doUniversalisRequest('https://universalis.app/api/marketable').pipe(
-            switchMap((itemIds: number[]) => {
-                console.log('Starting MB data aggregation');
+    switchMap(([, redis]) => {
+        return from(axios.get('https://xivapi.com/servers')).pipe(
+            switchMap(res => {
+                const servers: string[] = res.data;
                 return combineLatest(servers.map(server => {
-                        const chunks = chunk(itemIds, 100);
-                        return combineLatest(chunks.map((ids, index) => {
-                            return updateItems(server, ids).pipe(
-                                tap(() => {
-                                    console.log(`${server}#${index + 1}/${chunks.length}`);
-                                })
-                            );
-                        }))
-                    })
-                ).pipe(
-                    map(res => res.flat())
-                )
+                    return updateServerData(server).pipe(
+                        tap(() => console.log('UPDATED SERVER DATA', server))
+                    );
+                }));
             }),
             switchMap(res => {
                 if (res.length === 0) {
-                    return of([])
+                    return of([]);
                 }
                 return combineLatest(res.map(row => {
                     const itemIds = Object.keys(row.data);
@@ -79,14 +68,14 @@ combineLatest([
                     }));
                 })).pipe(
                     switchMap(() => {
-                        return from(updateCache(uniq(res.map(row => row.server)), items, redis))
+                        return from(updateCache(uniq(res.map(row => row.server)), items, redis));
                     })
                 );
             })
-        );
+        )
     })
-).subscribe({
-    complete: () => {
-        console.log('ALL DONE');
-    }
+).subscribe(() => {
+    closeUniversalisQueue();
+    console.log('ALL DONE');
+    process.exit(0);
 });

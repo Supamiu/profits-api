@@ -1,10 +1,10 @@
-import { createClient, RedisClientType } from 'redis';
-import { Item } from './item';
-import { combineLatest, Observable } from 'rxjs';
-import { subHours } from 'date-fns';
-import { map, switchMap } from 'rxjs/operators';
-import { doUniversalisRequest } from './universalis';
-import { uniqBy } from 'lodash';
+import {createClient, RedisClientType} from 'redis';
+import {Item} from './item';
+import {combineLatest, Observable} from 'rxjs';
+import {subHours} from 'date-fns';
+import {map, switchMap, tap} from 'rxjs/operators';
+import {doUniversalisRequest} from './universalis';
+import {uniqBy} from 'lodash';
 
 
 export async function createRedisClient(): Promise<RedisClientType> {
@@ -105,15 +105,29 @@ export function getLevelRequirements(item: Item, items: Record<number, Item>): n
 export function updateItems(server: string, itemIds: number[]): Observable<{ server: string, data: any[] }> {
     const yesterday = Math.floor(subHours(new Date(), 24).getTime() / 1000);
     const oneDaybeforeYesterday = Math.floor(subHours(new Date(), 48).getTime() / 1000);
+    const interval0 = setInterval(() => {
+        console.log(`STILL WAITING FOR https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`);
+    }, 120000);
+    const interval1 = setInterval(() => {
+        console.log(`STILL WAITING FOR https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`);
+    }, 120000);
     return combineLatest([
-        doUniversalisRequest(`https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`),
-        doUniversalisRequest(`https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`)
+        doUniversalisRequest(`https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`).pipe(
+            tap(() => {
+                clearInterval(interval0);
+            })
+        ),
+        doUniversalisRequest(`https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`).pipe(
+            tap(() => {
+                clearInterval(interval1);
+            })
+        )
     ]).pipe(
         map(([listing, history]) => {
             return {
                 server,
                 data: listing.items.reduce((acc: Record<string, any>, item: any) => {
-                    const historyEntry = history.items.find((hItem: any) => hItem.itemID === item.itemID) || { entries: [] };
+                    const historyEntry = history.items.find((hItem: any) => hItem.itemID === item.itemID) || {entries: []};
                     const last24hSales = historyEntry?.entries.filter((h: { timestamp: number }) => h.timestamp > yesterday) || [];
                     const tr24 = last24hSales.slice(-5).reduce((accp: number, row: any) => accp + row.pricePerUnit, 0) - last24hSales.slice(0, 5).reduce((accp: number, row: any) => accp + row.pricePerUnit, 0);
                     const v24 = last24hSales.reduce((total: number, e: { quantity: number }) => total + e.quantity, 0);
@@ -138,13 +152,13 @@ export function updateItems(server: string, itemIds: number[]): Observable<{ ser
                     };
                 }, {})
             };
-        })
+        }),
     );
 }
 
 export async function updateCache(servers: string[], items: Record<number, Item>, redis: RedisClientType): Promise<void> {
     console.log(`STARTING CACHE UPDATE FOR ${servers.length} servers`);
-    for(const server of servers){
+    for (const server of servers) {
         const currentServerCacheRaw = await redis.get(`profit:${server}`);
         let currentServerCache = [];
         if (currentServerCacheRaw) {
