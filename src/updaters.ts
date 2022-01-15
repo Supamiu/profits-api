@@ -1,7 +1,7 @@
 import axios from "axios";
 import {chunk, uniq} from "lodash";
 import {combineLatest, from, of, ReplaySubject, shareReplay, timer} from "rxjs";
-import {exhaustMap, map, pluck, switchMap, tap} from "rxjs/operators";
+import {exhaustMap, map, pluck, switchMap} from "rxjs/operators";
 import {createRedisClient, updateCache, updateItems, updateServerData} from "./common";
 import {doUniversalisRequest} from "./universalis";
 import {Item} from "./item";
@@ -37,6 +37,7 @@ const items$ = new ReplaySubject<Record<number, Item>>();
     items$.next(items);
 })();
 
+const timers = {};
 
 console.log('Creating core data Observable');
 const coreData$ = combineLatest([
@@ -53,7 +54,7 @@ coreData$.pipe(
     switchMap(([servers, redis, items]) => {
         return timer(0, 60000).pipe(
             exhaustMap(i => {
-                console.time(`UPDATE CACHE ${i}`);
+                timers[`CACHE:${i}`] = Date.now();
                 return combineLatest(servers.map(server => {
                     return updateServerData(server);
                 })).pipe(
@@ -81,7 +82,9 @@ coreData$.pipe(
         )
     })
 ).subscribe((i) => {
-    console.timeEnd(`UPDATE CACHE ${i}`);
+    const timeToUpdate = Date.now() - timers[`CACHE:${i}`];
+    sendToDiscord(`Cache update done in ${timeToUpdate.toLocaleString()}ms.`);
+    delete timers[`CACHE:${i}`];
 });
 
 
@@ -91,16 +94,12 @@ coreData$.pipe(
         // Update twice a day per server, start after 30s to avoid colliding with the other scheduler
         return timer(30000, Math.floor(86400000 / 2 / servers.length)).pipe(
             exhaustMap(i => {
-                console.time(`UPDATE FULL ${i}`);
                 const server = servers[i % (servers.length - 1)];
+                timers[`FULL:${server}`] = Date.now();
                 const chunks = chunk(itemIds, 100);
                 console.log(`Starting MB data aggregation for ${server}`);
                 return combineLatest(chunks.map((ids, index) => {
-                    return updateItems(server, ids).pipe(
-                        tap(() => {
-                            console.log(`${index + 1}/${chunks.length}`);
-                        })
-                    );
+                    return updateItems(server, ids);
                 })).pipe(
                     switchMap(res => {
                         if (res.length === 0) {
@@ -119,11 +118,18 @@ coreData$.pipe(
                                 return from(updateCache(uniq(res.map(row => row.server)), items, redis));
                             })
                         );
-                    })
+                    }),
+                    map(() => server)
                 );
             })
         )
     })
-).subscribe((i) => {
-    console.timeEnd(`UPDATE FULL ${i}`);
+).subscribe((server) => {
+    const timeToUpdate = Date.now() - timers[`FULL:${server}`];
+    sendToDiscord(`Full update for ${server} done in ${timeToUpdate.toLocaleString()}ms.`);
+    delete timers[`FULL:${server}`];
 });
+
+function sendToDiscord(message: string): void {
+    axios.post(process.env.WEBHOOK, {content: message});
+}

@@ -1,5 +1,5 @@
 import {from, interval, mergeMap, Observable, of, ReplaySubject, Subject, Subscription, timer} from "rxjs";
-import {filter, map, switchMap} from "rxjs/operators";
+import {filter, map, switchMap, tap} from "rxjs/operators";
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
@@ -72,12 +72,21 @@ function initQueue(): Subscription {
 }
 
 export function doUniversalisRequest<T = any>(url: string): Observable<T> {
+    const timeout = setTimeout(() => {
+        queue.push({
+            url, res$
+        })
+    }, 120000);
     const res$ = new ReplaySubject<T>();
     queue.push({
         url,
         res$
     });
-    return res$;
+    return res$.pipe(
+        tap(() => {
+            clearTimeout(timeout);
+        })
+    );
 }
 
 export function closeUniversalisQueue(): void {

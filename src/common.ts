@@ -2,7 +2,7 @@ import {createClient, RedisClientType} from 'redis';
 import {Item} from './item';
 import {combineLatest, Observable} from 'rxjs';
 import {subHours} from 'date-fns';
-import {map, switchMap, tap} from 'rxjs/operators';
+import {map, switchMap} from 'rxjs/operators';
 import {doUniversalisRequest} from './universalis';
 import {uniqBy} from 'lodash';
 
@@ -105,23 +105,9 @@ export function getLevelRequirements(item: Item, items: Record<number, Item>): n
 export function updateItems(server: string, itemIds: number[]): Observable<{ server: string, data: any[] }> {
     const yesterday = Math.floor(subHours(new Date(), 24).getTime() / 1000);
     const oneDaybeforeYesterday = Math.floor(subHours(new Date(), 48).getTime() / 1000);
-    const interval0 = setInterval(() => {
-        console.log(`STILL WAITING FOR https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`);
-    }, 120000);
-    const interval1 = setInterval(() => {
-        console.log(`STILL WAITING FOR https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`);
-    }, 120000);
     return combineLatest([
-        doUniversalisRequest(`https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`).pipe(
-            tap(() => {
-                clearInterval(interval0);
-            })
-        ),
-        doUniversalisRequest(`https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`).pipe(
-            tap(() => {
-                clearInterval(interval1);
-            })
-        )
+        doUniversalisRequest(`https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`),
+        doUniversalisRequest(`https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`)
     ]).pipe(
         map(([listing, history]) => {
             return {
@@ -157,7 +143,6 @@ export function updateItems(server: string, itemIds: number[]): Observable<{ ser
 }
 
 export async function updateCache(servers: string[], items: Record<number, Item>, redis: RedisClientType): Promise<void> {
-    console.log(`STARTING CACHE UPDATE FOR ${servers.length} servers`);
     for (const server of servers) {
         const currentServerCacheRaw = await redis.get(`profit:${server}`);
         let currentServerCache = [];
@@ -190,7 +175,7 @@ export async function updateCache(servers: string[], items: Record<number, Item>
             });
         }
         const newCache = uniqBy([...serverCache, ...currentServerCache], 'id');
-        console.log(`UPDATED CACHE FOR ${server}, ${serverCache.length} entries (${newCache.length} total)`);
+        console.log(`UPDATED CACHE FOR ${server}, ${serverCache.length} entries`);
         await redis.set(`profit:${server}`, JSON.stringify(newCache));
     }
 }
