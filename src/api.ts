@@ -47,7 +47,7 @@ function getScore(item: any, selfSufficient = true): number {
         }).slice(0, 20);
         return res.send({
             items: matching,
-            updated: +(serverUpdated || 1642050201)
+            updated: +(serverUpdated || 1642050201000)
         });
     });
 
@@ -72,7 +72,7 @@ function getScore(item: any, selfSufficient = true): number {
         }).slice(0, 20);
         return res.send({
             items: matching,
-            updated: +(serverUpdated || 1642050201)
+            updated: +(serverUpdated || 1642050201000)
         });
     });
 
