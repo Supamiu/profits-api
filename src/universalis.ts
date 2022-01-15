@@ -1,13 +1,25 @@
-import {from, interval, mapTo, mergeMap, Observable, of, ReplaySubject, Subject, Subscription, timer} from "rxjs";
+import {
+    catchError,
+    from,
+    interval,
+    mapTo,
+    mergeMap,
+    Observable,
+    of,
+    ReplaySubject,
+    Subject,
+    Subscription,
+    timer
+} from "rxjs";
 import {filter, map, switchMap, tap} from "rxjs/operators";
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
 
-const UNIVERSALIS_REQ_PER_SECOND = 20;
-const UNIVERSALIS_BURST = 20;
+const UNIVERSALIS_REQ_PER_SECOND = 15;
+const UNIVERSALIS_BURST = 15;
 
-axiosRetry(axios, {retries: 3, retryDelay: c => c * 1000})
+axiosRetry(axios, {retries: 3, retryDelay: c => Math.pow(c, 2) * 1000})
 
 const queue: { url: string, res$: Subject<any> }[] = [];
 
@@ -66,7 +78,11 @@ function initQueue(): Subscription {
                     };
                 })
             );
-        }, 10)
+        }, 10),
+        catchError(e => {
+            console.error(e.message);
+            return of(null);
+        })
     ).subscribe((entry) => {
         if (entry) {
             const {res$, res} = entry;
