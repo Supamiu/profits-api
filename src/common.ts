@@ -85,7 +85,7 @@ export function getLevelRequirements(item: Item, items: Record<number, Item>): n
         return baseRequirements;
     }
     if (item.gathering) {
-        baseRequirements[9 + Math.floor(item.gathering.type / 2)] = item.gathering.level;
+        baseRequirements[9 + item.gathering.type % 2] = item.gathering.level;
         return baseRequirements;
     } else if (item.crafting) {
         baseRequirements[item.crafting[0].job - 8] = item.crafting[0].lvl;
