@@ -39,7 +39,7 @@ function getScore(item: any, selfSufficient = true): number {
                 && row.complexity < maxComplexity
                 && row.v24 > minV24
                 && row.levelReqs.every((lvl: number, i: number) => {
-                    return (!selfSufficient && i > 8) || levels[i] >= lvl;
+                    return (!selfSufficient && i >= 8) || levels[i] >= lvl;
                 });
         }).sort((a, b) => {
             if (!selfSufficient) {
