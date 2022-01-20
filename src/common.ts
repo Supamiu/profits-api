@@ -81,10 +81,10 @@ export async function computeProfit(item: Item, server: string, redis: RedisClie
 
 export function getLevelRequirements(item: Item, items: Record<number, Item>): number[] {
     let baseRequirements = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    if (item.id < 20) {
+    if (!item) {
         return baseRequirements;
     }
-    if (!item) {
+    if (item.id < 20) {
         return baseRequirements;
     }
     if (item.gathering) {
