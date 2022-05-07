@@ -83,7 +83,7 @@ function initQueue(): Subscription {
                     delay: (error, retryCount) => of(Math.pow(retryCount, 2) * 1000)
                 }),
                 catchError(e => {
-                    console.error(e.message);
+                    console.error(url, e.message);
                     queue.push({url, res$});
                     return of(null)
                 })
