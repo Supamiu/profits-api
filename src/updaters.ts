@@ -118,13 +118,15 @@ coreData$.pipe(
                                 return from(redis.set(`profit:${server}:updated`, Date.now()))
                             }),
                             map(() => {
+                                console.log(`${server} ok, ${Math.floor((Date.now() - start) / 1000)}s`);
                                 return {
                                     server,
                                     success: true,
                                     time: Date.now() - start
                                 }
                             }),
-                            catchError(() => {
+                            catchError((err) => {
+                                console.log(err)
                                 return of({
                                     server,
                                     success: false,

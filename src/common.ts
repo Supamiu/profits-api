@@ -178,7 +178,6 @@ export async function updateCache(servers: string[], items: Record<number, Item>
             });
         }
         const newCache = uniqBy([...serverCache, ...currentServerCache], 'id');
-        console.log(`UPDATED CACHE FOR ${server}`);
         await redis.set(`profit:${server}`, JSON.stringify(newCache));
     }
 }

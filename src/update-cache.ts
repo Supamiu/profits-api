@@ -3,7 +3,6 @@ import {uniq} from "lodash";
 import {BehaviorSubject, combineLatest, from, of} from "rxjs";
 import {filter, switchMap, tap} from "rxjs/operators";
 import {createRedisClient, updateCache, updateServerData} from "./common";
-import {closeUniversalisQueue} from "./universalis";
 import {Item} from "./item";
 
 let items: Record<number, Item> = {};
@@ -75,7 +74,6 @@ combineLatest([
         )
     })
 ).subscribe(() => {
-    closeUniversalisQueue();
     console.log('ALL DONE');
     process.exit(0);
 });
