@@ -88,9 +88,6 @@ axios.post(process.env.WEBHOOK, {
         title: 'Updater started',
         color: 5832650,
         description: `Updater process has been started, initializing now... expect an update starting in a couple of seconds.`,
-        footer: {
-            text: `<t:${Math.floor(Date.now() / 1000)}>`
-        }
     }],
     username: 'Profits Helper Updater'
 });
@@ -104,9 +101,6 @@ coreData$.pipe(
                     title: 'Full update starting',
                     color: 5814783,
                     description: `Starting full update for ${servers.length} servers, ${itemIds.length} items (${Math.ceil(itemIds.length / 100)} chunks, ${Math.ceil(itemIds.length / 100) * servers.length} requests), this is expected to take about **${expectedDuration.hours} hours and ${expectedDuration.minutes} minutes** and should be done on <t:${Math.floor(new Date(Date.now() + servers.length * 180000).getTime() / 1000)}>`,
-                    footer: {
-                        text: `<t:${Math.floor(Date.now() / 1000)}>`
-                    }
                 }],
                 username: 'Profits Helper Updater'
             });
