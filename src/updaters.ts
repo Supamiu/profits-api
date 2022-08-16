@@ -103,7 +103,7 @@ coreData$.pipe(
                 embeds: [{
                     title: 'Full update starting',
                     color: 5814783,
-                    description: `Starting full update for ${servers.length} servers, ${itemIds.length} items (${Math.ceil(itemIds.length / 100)} chunks), this is expected to take about **${expectedDuration.hours} hours and ${expectedDuration.minutes} minutes** and should be done on **${new Date(Date.now() + servers.length * 180000).toString()}**`,
+                    description: `Starting full update for ${servers.length} servers, ${itemIds.length} items (${Math.ceil(itemIds.length / 100)} chunks, ${Math.ceil(itemIds.length / 100) * servers.length} requests), this is expected to take about **${expectedDuration.hours} hours and ${expectedDuration.minutes} minutes** and should be done on <t:${Math.floor(new Date(Date.now() + servers.length * 180000).getTime() / 1000)}>`,
                     footer: {
                         text: new Date().toString()
                     }
@@ -202,7 +202,7 @@ coreData$.pipe(
             color: success ? 4169782 : 16734296,
             fields,
             footer: {
-                text: `Next update cycle: ${new Date(Date.now() + delayBetweenRuns).toString()}`
+                text: `Next update cycle: <t:${Math.floor(new Date(Date.now() + delayBetweenRuns).getTime() / 1000)}>`
             }
         }],
         username: 'Profits Helper Updater'
