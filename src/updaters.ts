@@ -83,65 +83,95 @@ const coreData$ = combineLatest([
 
 console.log('Creating full data scheduler');
 
+axios.post(process.env.WEBHOOK, {
+    embeds: [{
+        title: 'Updater started',
+        color: 5832650,
+        description: `Updater process has been started, initializing now... expect an update starting in a couple of seconds.`,
+        footer: {
+            text: new Date().toString()
+        }
+    }],
+    username: 'Profits Helper Updater'
+});
+
 coreData$.pipe(
     switchMap(([servers, redis, items, itemIds]) => {
-        return defer(() => properConcat(servers.map(server => {
-                const chunks = chunk(itemIds, 100);
-                return of(chunks).pipe(
-                    switchMap(() => {
-                        const start = Date.now();
-                        console.log(`Starting MB data aggregation for ${server}`);
-                        return combineLatest(
-                            chunks.map((ids) => {
-                                return updateItems(server, ids);
-                            })
-                        ).pipe(
-                            switchMap(res => {
-                                if (res.length === 0) {
-                                    return of([]);
-                                }
-                                return combineLatest(res.map(row => {
-                                    const itemIds = Object.keys(row.data);
-                                    if (itemIds.length === 0) {
+        return defer(() => {
+            const expectedDuration = intervalToDuration({start: 0, end: servers.length * 180000});
+            axios.post(process.env.WEBHOOK, {
+                embeds: [{
+                    title: 'Full update starting',
+                    color: 5814783,
+                    description: `Starting full update for ${servers.length} servers, ${itemIds.length} items (${Math.ceil(itemIds.length / 100)} chunks), this is expected to take about **${expectedDuration.hours} hours and ${expectedDuration.minutes} minutes** and should be done on **${new Date(Date.now() + servers.length * 180000).toString()}**`,
+                    footer: {
+                        text: new Date().toString()
+                    }
+                }],
+                username: 'Profits Helper Updater'
+            });
+            return properConcat(servers.map(server => {
+                    const chunks = chunk(itemIds, 100);
+                    return of(chunks).pipe(
+                        switchMap(() => {
+                            const start = Date.now();
+                            console.log(`Starting MB data aggregation for ${server}`);
+                            return combineLatest(
+                                chunks.map((ids) => {
+                                    return updateItems(server, ids);
+                                })
+                            ).pipe(
+                                switchMap(res => {
+                                    if (res.length === 0) {
                                         return of([]);
                                     }
-                                    return combineLatest(itemIds.map(id => {
-                                        return from(redis.set(`mb:${row.server}:${id}`, JSON.stringify(row.data[+id])));
-                                    }));
-                                })).pipe(
-                                    switchMap(() => {
-                                        return from(updateCache(uniq(res.map(row => row.server)), items, redis));
+                                    return combineLatest(res.map(row => {
+                                        const itemIds = Object.keys(row.data);
+                                        if (itemIds.length === 0) {
+                                            return of([]);
+                                        }
+                                        return combineLatest(itemIds.map(id => {
+                                            return from(redis.set(`mb:${row.server}:${id}`, JSON.stringify(row.data[+id])));
+                                        }));
+                                    })).pipe(
+                                        switchMap(() => {
+                                            return from(updateCache(uniq(res.map(row => row.server)), items, redis));
+                                        })
+                                    );
+                                }),
+                                switchMap(() => {
+                                    return from(redis.set(`profit:${server}:updated`, Date.now()))
+                                }),
+                                map(() => {
+                                    console.log(`${server} ok, ${Math.floor((Date.now() - start) / 1000)}s`);
+                                    return {
+                                        server,
+                                        success: true,
+                                        time: Date.now() - start
+                                    }
+                                }),
+                                catchError((err) => {
+                                    console.log(err.message)
+                                    return of({
+                                        server,
+                                        success: false,
+                                        time: Date.now() - start
                                     })
-                                );
-                            }),
-                            switchMap(() => {
-                                return from(redis.set(`profit:${server}:updated`, Date.now()))
-                            }),
-                            map(() => {
-                                console.log(`${server} ok, ${Math.floor((Date.now() - start) / 1000)}s`);
-                                return {
-                                    server,
-                                    success: true,
-                                    time: Date.now() - start
-                                }
-                            }),
-                            catchError((err) => {
-                                console.log(err)
-                                return of({
-                                    server,
-                                    success: false,
-                                    time: Date.now() - start
-                                })
-                            }),
-                        )
-                    })
-                );
-            })
-        )).pipe(
+                                }),
+                            )
+                        })
+                    );
+                })
+            )
+        }).pipe(
             repeat({
                 delay: delayBetweenRuns
             }),
-            retry()
+            retry({
+                count: 3,
+                resetOnSuccess: true,
+                delay: 10000
+            })
         )
     })
 ).subscribe((result) => {
@@ -177,6 +207,5 @@ coreData$.pipe(
         }],
         username: 'Profits Helper Updater'
     };
-    console.log(JSON.stringify(report));
     axios.post(process.env.WEBHOOK, report).catch(err => console.log(err.message));
 });
