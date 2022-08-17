@@ -202,7 +202,7 @@ coreData$.pipe(
     const fields = [
         {
             name: "Avg per server",
-            value: `${totalTime / 1000 / result.length}s`
+            value: `${Math.floor(totalTime / 1000 / result.length)}s`
         },
         {
             name: "Total time for this run",
@@ -222,7 +222,7 @@ coreData$.pipe(
             color: success ? 4169782 : 16734296,
             fields,
             footer: {
-                text: `Next update cycle: <t:${Math.floor(new Date(Date.now() + delayBetweenRuns).getTime() / 1000)}>`
+                text: `Next update cycle in 1h`
             }
         }],
         username: 'Profits Helper Updater'
