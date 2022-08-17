@@ -19,11 +19,15 @@ queue$.pipe(
     }, 5)
 ).subscribe()
 
-export function doUniversalisRequest<T = any>(url: string): Observable<T> {
+export function doUniversalisRequest<T = any>(url: string, errors$: Subject<{ source: string, message: string }>): Observable<T> {
     const res$ = new Subject<any>()
     queue$.next({
         req: defer(() => {
-            return from(axios.get(url).catch(err => console.error(err.message))).pipe(
+            return from(axios.get(url).catch(err => {
+                errors$.next({source: `[Universalis] ${url}`, message: err.message})
+                console.error(err.message)
+                throw err
+            })).pipe(
                 retry({
                     count: 10,
                     delay: (error, retryCount) => of(retryCount * 20000),

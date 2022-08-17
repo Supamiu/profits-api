@@ -2,8 +2,10 @@ import axios from "axios";
 import {chunk, uniq} from "lodash";
 import {
     BehaviorSubject,
+    buffer,
     catchError,
     combineLatest,
+    debounceTime,
     defer,
     first,
     from,
@@ -14,7 +16,8 @@ import {
     retry,
     scan,
     shareReplay,
-    skip
+    skip,
+    Subject
 } from "rxjs";
 import {map, switchMap, tap} from "rxjs/operators";
 import {createRedisClient, updateCache, updateItems} from "./common";
@@ -71,12 +74,34 @@ function properConcat<T>(sources: Observable<T>[]): Observable<T[]> {
     items$.next(items);
 })();
 
+const errors$ = new Subject<{ source: string, message: string }>();
+
+errors$.pipe(
+    buffer(errors$.pipe(debounceTime(30000))),
+    map(errors => uniq(errors))
+).subscribe(errors => {
+    axios.post(process.env.WEBHOOK, {
+        embeds: errors.map(({source, message}) => {
+            return {
+                title: source,
+                description: message,
+                color: 16711680
+            }
+        }),
+        username: 'Profits Helper Updater'
+    }).catch(err => console.log(err.message));
+})
+
 console.log('Creating core data Observable');
+
 const coreData$ = combineLatest([
-    from(axios.get('https://xivapi.com/servers')).pipe(map(res => res.data as string[])),
+    from(axios.get('https://xivapi.com/servers').catch(err => {
+        errors$.next({source: '[Core Data] xivapi.com/servers', message: err.message});
+        return {data: []}
+    })).pipe(map(res => res.data as string[])),
     from(createRedisClient()),
     items$,
-    doUniversalisRequest<number[]>('https://universalis.app/api/marketable')
+    doUniversalisRequest<number[]>('https://universalis.app/api/marketable', errors$)
 ]).pipe(
     shareReplay(1)
 );
@@ -145,6 +170,7 @@ coreData$.pipe(
                                     }
                                 }),
                                 catchError((err) => {
+                                    errors$.next({source: `[Updater] Server ${server}`, message: err.message});
                                     console.log(err.message)
                                     return of({
                                         server,
