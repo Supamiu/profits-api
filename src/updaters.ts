@@ -137,7 +137,7 @@ coreData$.pipe(
                             console.log(`Starting MB data aggregation for ${server}`);
                             return combineLatest(
                                 chunks.map((ids) => {
-                                    return updateItems(server, ids);
+                                    return updateItems(server, ids, errors$);
                                 })
                             ).pipe(
                                 switchMap(res => {

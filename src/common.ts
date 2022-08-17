@@ -1,6 +1,6 @@
 import {createClient, RedisClientType} from 'redis';
 import {Item} from './item';
-import {combineLatest, Observable} from 'rxjs';
+import {combineLatest, Observable, Subject} from 'rxjs';
 import {subHours} from 'date-fns';
 import {map, switchMap} from 'rxjs/operators';
 import {doUniversalisRequest} from './universalis';
@@ -105,12 +105,12 @@ export function getLevelRequirements(item: Item, items: Record<number, Item>): n
     return baseRequirements;
 }
 
-export function updateItems(server: string, itemIds: number[]): Observable<{ server: string, data: any[] }> {
+export function updateItems(server: string, itemIds: number[], errors$: Subject<{ source: string, message: string }>): Observable<{ server: string, data: any[] }> {
     const yesterday = Math.floor(subHours(new Date(), 24).getTime() / 1000);
     const oneDaybeforeYesterday = Math.floor(subHours(new Date(), 48).getTime() / 1000);
     return combineLatest([
-        doUniversalisRequest(`https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`),
-        doUniversalisRequest(`https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`)
+        doUniversalisRequest(`https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`, errors$),
+        doUniversalisRequest(`https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`, errors$)
     ]).pipe(
         map(([listing, history]) => {
             return {
@@ -183,10 +183,10 @@ export async function updateCache(servers: string[], items: Record<number, Item>
 }
 
 
-export function updateServerData(server: string): Observable<Record<string, any>> {
-    return doUniversalisRequest(`https://universalis.app/api/extra/stats/most-recently-updated?world=${server}`).pipe(
+export function updateServerData(server: string, errors$: Subject<{ source: string, message: string }>): Observable<Record<string, any>> {
+    return doUniversalisRequest(`https://universalis.app/api/extra/stats/most-recently-updated?world=${server}`, errors$).pipe(
         switchMap((mru: { items: any[] }) => {
-            return updateItems(server, mru.items.map(item => item.itemID));
+            return updateItems(server, mru.items.map(item => item.itemID), errors$);
         })
     );
 }

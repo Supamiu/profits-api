@@ -1,8 +1,5 @@
 import axios from "axios";
-import {uniq} from "lodash";
-import {BehaviorSubject, combineLatest, from, of} from "rxjs";
-import {filter, switchMap, tap} from "rxjs/operators";
-import {createRedisClient, updateCache, updateServerData} from "./common";
+import {BehaviorSubject, combineLatest, from} from "rxjs";
 import {Item} from "./item";
 
 let items: Record<number, Item> = {};
@@ -39,41 +36,41 @@ combineLatest([
 });
 
 
-combineLatest([
-    itemsDone$.pipe(filter(done => done)),
-    createRedisClient()
-]).pipe(
-    switchMap(([, redis]) => {
-        return from(axios.get('https://xivapi.com/servers')).pipe(
-            switchMap(res => {
-                const servers: string[] = res.data;
-                return combineLatest(servers.map(server => {
-                    return updateServerData(server).pipe(
-                        tap(() => console.log('UPDATED SERVER DATA', server))
-                    );
-                }));
-            }),
-            switchMap(res => {
-                if (res.length === 0) {
-                    return of([]);
-                }
-                return combineLatest(res.map(row => {
-                    const itemIds = Object.keys(row.data);
-                    if (itemIds.length === 0) {
-                        return of([]);
-                    }
-                    return combineLatest(itemIds.map(id => {
-                        return from(redis.set(`mb:${row.server}:${id}`, JSON.stringify(row.data[+id])));
-                    }));
-                })).pipe(
-                    switchMap(() => {
-                        return from(updateCache(uniq(res.map(row => row.server)), items, redis));
-                    })
-                );
-            })
-        )
-    })
-).subscribe(() => {
-    console.log('ALL DONE');
-    process.exit(0);
-});
+// combineLatest([
+//     itemsDone$.pipe(filter(done => done)),
+//     createRedisClient()
+// ]).pipe(
+//     switchMap(([, redis]) => {
+//         return from(axios.get('https://xivapi.com/servers')).pipe(
+//             switchMap(res => {
+//                 const servers: string[] = res.data;
+//                 return combineLatest(servers.map(server => {
+//                     return updateServerData(server).pipe(
+//                         tap(() => console.log('UPDATED SERVER DATA', server))
+//                     );
+//                 }));
+//             }),
+//             switchMap(res => {
+//                 if (res.length === 0) {
+//                     return of([]);
+//                 }
+//                 return combineLatest(res.map(row => {
+//                     const itemIds = Object.keys(row.data);
+//                     if (itemIds.length === 0) {
+//                         return of([]);
+//                     }
+//                     return combineLatest(itemIds.map(id => {
+//                         return from(redis.set(`mb:${row.server}:${id}`, JSON.stringify(row.data[+id])));
+//                     }));
+//                 })).pipe(
+//                     switchMap(() => {
+//                         return from(updateCache(uniq(res.map(row => row.server)), items, redis));
+//                     })
+//                 );
+//             })
+//         )
+//     })
+// ).subscribe(() => {
+//     console.log('ALL DONE');
+//     process.exit(0);
+// });
