@@ -2,7 +2,7 @@ import {defer, delay, from, mergeMap, Observable, of, pluck, retry, Subject, swi
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
-axiosRetry(axios, {retries: 3, retryDelay: c => Math.pow(c, 2) * 1000})
+axiosRetry(axios, {retries: 3, retryDelay: c => Math.pow(c, 2) * 10000})
 
 const queue$: Subject<{ req: Observable<any>, res$: Subject<any> }> = new Subject<{ req: Observable<any>; res$: Subject<any> }>();
 
