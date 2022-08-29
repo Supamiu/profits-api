@@ -9,7 +9,7 @@ const queue$: Subject<{ req: Observable<any>, res$: Subject<any> }> = new Subjec
 queue$.pipe(
     mergeMap(({req, res$}) => {
         return of(null).pipe(
-            delay(1000 / 20),
+            delay(1000 / 15),
             switchMapTo(req),
             tap(result => {
                 res$.next(result)
