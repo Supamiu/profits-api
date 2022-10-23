@@ -27,6 +27,7 @@ import {intervalToDuration} from "date-fns";
 
 const items$ = new ReplaySubject<Record<number, Item>>();
 const delayBetweenRuns = 3600000;
+const updated$ = new Subject<void>();
 
 function properConcat<T>(sources: Observable<T>[]): Observable<T[]> {
     const index$ = new BehaviorSubject<number>(0);
@@ -116,6 +117,7 @@ axios.post(process.env.WEBHOOK, {
     }],
     username: 'Profits Helper Updater'
 });
+
 
 coreData$.pipe(
     switchMap(([servers, redis, items, itemIds]) => {
@@ -228,4 +230,18 @@ coreData$.pipe(
         username: 'Profits Helper Updater'
     };
     axios.post(process.env.WEBHOOK, report).catch(err => console.log(err.message));
+    updated$.next(void 0);
+});
+
+// If no updates after an entire day, ping Miu in the monitoring channel !
+updated$.pipe(debounceTime(86400000)).subscribe(() => {
+    axios.post(process.env.WEBHOOK, {
+        content: null,
+        embeds: [{
+            title: 'No updates for more than a day',
+            description: '<@194378871317987328>',
+            color: 16734296
+        }],
+        username: 'Profits Helper Updater'
+    });
 });
