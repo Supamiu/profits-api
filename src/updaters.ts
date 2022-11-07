@@ -1,5 +1,5 @@
 import axios from "axios";
-import {chunk, uniq} from "lodash";
+import {chunk, uniq, uniqBy} from "lodash";
 import {
     BehaviorSubject,
     buffer,
@@ -13,7 +13,6 @@ import {
     of,
     repeat,
     ReplaySubject,
-    retry,
     scan,
     shareReplay,
     skip,
@@ -78,19 +77,22 @@ function properConcat<T>(sources: Observable<T>[]): Observable<T[]> {
 const errors$ = new Subject<{ source: string, message: string }>();
 
 errors$.pipe(
-    buffer(errors$.pipe(debounceTime(30000))),
-    map(errors => uniq(errors))
+    buffer(errors$.pipe(debounceTime(10000))),
+    map(errors => uniqBy(errors, err => err.message))
 ).subscribe(errors => {
     axios.post(process.env.WEBHOOK, {
+        content: null,
         embeds: errors.map(({source, message}) => {
             return {
                 title: source,
                 description: message,
                 color: 16711680
             }
-        }),
+        }).slice(0, 5),
         username: 'Profits Helper Updater'
-    }).catch(err => console.log(err.message));
+    }).catch(err => {
+        console.log(`[DISCORD ERROR HOOK] ${err.message}`)
+    });
 })
 
 console.log('Creating core data Observable');
@@ -188,11 +190,6 @@ coreData$.pipe(
         }).pipe(
             repeat({
                 delay: delayBetweenRuns
-            }),
-            retry({
-                count: 3,
-                resetOnSuccess: true,
-                delay: 120000
             })
         )
     })
