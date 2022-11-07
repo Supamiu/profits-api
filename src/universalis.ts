@@ -34,7 +34,7 @@ export function doUniversalisRequest<T = any>(url: string, errors$: Subject<{ so
     const res$ = new Subject<any>()
     queue$.next({
         req: defer(() => {
-            return from(axios.get(url.replace('universalis', 'universalissss')).catch((err: AxiosError) => {
+            return from(axios.get(url).catch((err: AxiosError) => {
                 console.error(`[${err.response?.status}] ${err.message}\n${url}`);
                 errors$.next({source: `[Universalis] ${url}`, message: `[${err.response?.status}] ${err.message}`})
                 throw err
