@@ -11,7 +11,8 @@ import {
     retry,
     Subject,
     switchMapTo,
-    tap, timer
+    tap,
+    timer
 } from "rxjs";
 import axios, {AxiosError} from "axios";
 
@@ -36,7 +37,10 @@ export function doUniversalisRequest<T = any>(url: string, errors$: Subject<{ so
         req: defer(() => {
             return from(axios.get(url).catch((err: AxiosError) => {
                 console.error(`[${err.response?.status}] ${err.message}\n${url}`);
-                errors$.next({source: `[Universalis] ${url}`, message: `[${err.response?.status}] ${err.message}`})
+                errors$.next({
+                    source: `[Universalis] ${url}`,
+                    message: `[${err.response?.status}] ${err.message}`
+                })
                 throw err
             }))
         }).pipe(

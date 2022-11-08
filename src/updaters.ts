@@ -1,8 +1,7 @@
 import axios from "axios";
-import {chunk, uniq, uniqBy} from "lodash";
+import {chunk, uniq} from "lodash";
 import {
     BehaviorSubject,
-    buffer,
     catchError,
     combineLatest,
     debounceTime,
@@ -16,7 +15,8 @@ import {
     scan,
     shareReplay,
     skip,
-    Subject
+    Subject,
+    throttleTime
 } from "rxjs";
 import {map, switchMap, tap} from "rxjs/operators";
 import {createRedisClient, updateCache, updateItems} from "./common";
@@ -77,18 +77,15 @@ function properConcat<T>(sources: Observable<T>[]): Observable<T[]> {
 const errors$ = new Subject<{ source: string, message: string }>();
 
 errors$.pipe(
-    buffer(errors$.pipe(debounceTime(10000))),
-    map(errors => uniqBy(errors, err => err.message))
-).subscribe(errors => {
+    throttleTime(60000),
+).subscribe(({source, message}) => {
     axios.post(process.env.WEBHOOK, {
         content: null,
-        embeds: errors.map(({source, message}) => {
-            return {
-                title: source,
-                description: message,
-                color: 16711680
-            }
-        }).slice(0, 5),
+        embeds: [{
+            title: message,
+            description: `${source.slice(0, 256)}...`,
+            color: 16711680
+        }],
         username: 'Profits Helper Updater'
     }).catch(err => {
         console.log(`[DISCORD ERROR HOOK] ${err.message}`)
