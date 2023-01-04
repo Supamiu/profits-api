@@ -21,14 +21,14 @@ const queue$: Subject<{ req: Observable<any>, res$: Subject<any> }> = new Subjec
 queue$.pipe(
     mergeMap(({req, res$}) => {
         return of(null).pipe(
-            delay(1000 / 15),
+            delay(1000 / 8),
             switchMapTo(req),
             tap(result => {
                 res$.next(result)
                 res$.complete()
             })
         )
-    }, 10)
+    }, 5)
 ).subscribe()
 
 export function doUniversalisRequest<T = any>(url: string, errors$: Subject<{ source: string, message: string }>): Observable<T> {
@@ -45,7 +45,7 @@ export function doUniversalisRequest<T = any>(url: string, errors$: Subject<{ so
             }))
         }).pipe(
             retry({
-                count: 10,
+                count: 100,
                 delay: (error, retryCount) => timer(retryCount * 5000),
                 resetOnSuccess: true
             }),
