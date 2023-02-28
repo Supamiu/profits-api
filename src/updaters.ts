@@ -48,8 +48,8 @@ function properConcat<T>(sources: Observable<T>[]): Observable<T[]> {
 (async () => {
     console.log('Preparing items');
     const items = {};
-    const extractsReq = await axios.get('https://github.com/ffxiv-teamcraft/ffxiv-teamcraft/raw/staging/apps/client/src/assets/extracts/extracts.json');
-    const recipesReq = await axios.get('https://raw.githubusercontent.com/ffxiv-teamcraft/ffxiv-teamcraft/staging/apps/client/src/assets/data/recipes.json');
+    const extractsReq = await axios.get('https://raw.githubusercontent.com/ffxiv-teamcraft/ffxiv-teamcraft/staging/libs/data/src/lib/extracts/extracts.json');
+    const recipesReq = await axios.get('https://raw.githubusercontent.com/ffxiv-teamcraft/ffxiv-teamcraft/staging/libs/data/src/lib/json/recipes.json');
     const extracts = extractsReq.data;
     const recipes = recipesReq.data;
     Object.values<any>(extracts)
