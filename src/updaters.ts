@@ -23,6 +23,7 @@ import {createRedisClient, updateCache, updateItems} from "./common";
 import {doUniversalisRequest} from "./universalis";
 import {Item} from "./item";
 import {intervalToDuration} from "date-fns";
+import {exec} from "child_process";
 
 const items$ = new ReplaySubject<Record<number, Item>>();
 const delayBetweenRuns = 3600000;
@@ -230,12 +231,12 @@ coreData$.pipe(
 // If no updates after an entire day, ping Miu in the monitoring channel !
 updated$.pipe(debounceTime(86400000)).subscribe(() => {
     axios.post(process.env.WEBHOOK, {
-        content: null,
+        content: '<@194378871317987328>',
         embeds: [{
             title: 'No updates for more than a day',
-            description: '<@194378871317987328>',
             color: 16734296
         }],
         username: 'Profits Helper Updater'
     });
+    exec('pm2 restart Bot');
 });

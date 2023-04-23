@@ -2,7 +2,7 @@ import {createClient, RedisClientType} from 'redis';
 import {Item} from './item';
 import {combineLatest, Observable, Subject} from 'rxjs';
 import {subHours} from 'date-fns';
-import {map, switchMap} from 'rxjs/operators';
+import {map} from 'rxjs/operators';
 import {doUniversalisRequest} from './universalis';
 import {uniqBy} from 'lodash';
 
@@ -180,13 +180,4 @@ export async function updateCache(servers: string[], items: Record<number, Item>
         const newCache = uniqBy([...serverCache, ...currentServerCache], 'id');
         await redis.set(`profit:${server}`, JSON.stringify(newCache));
     }
-}
-
-
-export function updateServerData(server: string, errors$: Subject<{ source: string, message: string }>): Observable<Record<string, any>> {
-    return doUniversalisRequest(`https://universalis.app/api/extra/stats/most-recently-updated?world=${server}`, errors$).pipe(
-        switchMap((mru: { items: any[] }) => {
-            return updateItems(server, mru.items.map(item => item.itemID), errors$);
-        })
-    );
 }
