@@ -238,5 +238,5 @@ updated$.pipe(debounceTime(86400000)).subscribe(() => {
         }],
         username: 'Profits Helper Updater'
     });
-    exec('pm2 restart Bot');
+    exec('pm2 restart Updater');
 });
