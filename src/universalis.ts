@@ -1,22 +1,10 @@
-import {
-    catchError,
-    defer,
-    delay,
-    EMPTY,
-    from,
-    mergeMap,
-    Observable,
-    of,
-    pluck,
-    retry,
-    Subject,
-    switchMapTo,
-    tap,
-    timer
-} from "rxjs";
+import {catchError, delay, EMPTY, mergeMap, Observable, of, pluck, retry, Subject, switchMapTo, tap, timer} from "rxjs";
 import axios, {AxiosError} from "axios";
 
-const queue$: Subject<{ req: Observable<any>, res$: Subject<any> }> = new Subject<{ req: Observable<any>; res$: Subject<any> }>();
+const queue$: Subject<{ req: Observable<any>, res$: Subject<any> }> = new Subject<{
+    req: Observable<any>;
+    res$: Subject<any>
+}>();
 
 queue$.pipe(
     mergeMap(({req, res$}) => {
@@ -31,18 +19,27 @@ queue$.pipe(
     }, 5)
 ).subscribe()
 
-export function doUniversalisRequest<T = any>(url: string, errors$: Subject<{ source: string, message: string }>): Observable<T> {
+export function doUniversalisRequest<T = any>(url: string, errors$: Subject<{
+    source: string,
+    message: string
+}>): Observable<T> {
     const res$ = new Subject<any>()
     queue$.next({
-        req: defer(() => {
-            return from(axios.get(url).catch((err: AxiosError) => {
-                console.error(`[${err.response?.status}] ${err.message}\n${url}`);
-                errors$.next({
-                    source: `[Universalis] ${url}`,
-                    message: `[${err.response?.status}] ${err.message}`
+        req: new Observable(subscriber => {
+            axios.get(url)
+                .catch((err: AxiosError) => {
+                    console.error(`[${err.response?.status}] ${err.message}\n${url}`);
+                    errors$.next({
+                        source: `[Universalis] ${url}`,
+                        message: `[${err.response?.status}] ${err.message}`
+                    })
+                    subscriber.error(err);
+                    subscriber.complete();
                 })
-                throw err
-            }))
+                .then(res => {
+                    subscriber.next(res);
+                    subscriber.complete();
+                })
         }).pipe(
             retry({
                 count: 100,
