@@ -24,6 +24,7 @@ import {doUniversalisRequest} from "./universalis";
 import {Item} from "./item";
 import {intervalToDuration} from "date-fns";
 import {exec} from "child_process";
+import {GAME_SERVERS} from "./servers";
 
 const items$ = new ReplaySubject<Record<number, Item>>();
 const delayBetweenRuns = 3600000;
@@ -96,10 +97,7 @@ errors$.pipe(
 console.log('Creating core data Observable');
 
 const coreData$ = combineLatest([
-    from(axios.get('https://xivapi.com/servers').catch(err => {
-        errors$.next({source: '[Core Data] xivapi.com/servers', message: err.message});
-        return {data: []}
-    })).pipe(map(res => res.data as string[])),
+    of(GAME_SERVERS),
     from(createRedisClient()),
     items$,
     doUniversalisRequest<number[]>('https://universalis.app/api/marketable', errors$)
