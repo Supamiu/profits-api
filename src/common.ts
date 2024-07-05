@@ -109,8 +109,8 @@ export function updateItems(server: string, itemIds: number[], errors$: Subject<
     const yesterday = Math.floor(subHours(new Date(), 24).getTime() / 1000);
     const oneDaybeforeYesterday = Math.floor(subHours(new Date(), 48).getTime() / 1000);
     return combineLatest([
-        doUniversalisRequest(`https://universalis.app/api/${server}/${itemIds.join(',')}?statsWithin=0`, errors$),
-        doUniversalisRequest(`https://universalis.app/api/history/${server}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`, errors$)
+        doUniversalisRequest(`https://universalis.app/api/${encodeURIComponent(server)}/${itemIds.join(',')}?statsWithin=0`, errors$),
+        doUniversalisRequest(`https://universalis.app/api/history/${encodeURIComponent(server)}/${itemIds.join(',')}?entriesWithin=172800&statsWithin=0`, errors$)
     ]).pipe(
         map(([listing, history]) => {
             return {
