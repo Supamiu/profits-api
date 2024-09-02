@@ -26,7 +26,11 @@ export function doUniversalisRequest<T = any>(url: string, errors$: Subject<{
     const res$ = new Subject<any>()
     queue$.next({
         req: new Observable(subscriber => {
-            axios.get(url)
+            axios.get(url, {
+                headers: {
+                    "User-Agent": "FFXIV Teamcraft Profits Helper",
+                }
+            })
                 .catch((err: AxiosError) => {
                     console.error(`[${err.response?.status}] ${err.message}\n${url}`);
                     errors$.next({

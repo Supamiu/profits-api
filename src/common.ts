@@ -115,7 +115,7 @@ export function updateItems(server: string, itemIds: number[], errors$: Subject<
         map(([listing, history]) => {
             return {
                 server,
-                data: listing.items.reduce((acc: Record<string, any>, item: any) => {
+                data: (listing.items || []).reduce((acc: Record<string, any>, item: any) => {
                     const historyEntry = history.items.find((hItem: any) => hItem.itemID === item.itemID) || {entries: []};
                     const last24hSales = historyEntry?.entries.filter((h: { timestamp: number }) => h.timestamp > yesterday) || [];
                     const tr24 = last24hSales.slice(-5).reduce((accp: number, row: any) => accp + row.pricePerUnit, 0) - last24hSales.slice(0, 5).reduce((accp: number, row: any) => accp + row.pricePerUnit, 0);

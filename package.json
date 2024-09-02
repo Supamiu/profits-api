@@ -8,7 +8,7 @@
     "deploy": "gcloud builds submit --tag gcr.io/ffxivteamcraft/profits-api && gcloud beta run deploy profits-api --image gcr.io/ffxivteamcraft/profits-api --region us-central1"
   },
   "engines": {
-    "node": "16"
+    "node": "20"
   },
   "main": "dist/updaters.js",
   "dependencies": {
